@@ -29,6 +29,9 @@ jobs:
           pip install mlflow scikit-learn pandas
 
       - name: Run MLflow Project
+        env:
+          MLFLOW_TRACKING_URI: file:./mlruns
+          MLFLOW_ARTIFACT_ROOT: ./mlruns
         run: |
           mlflow run MLProject --env-manager=local
 
