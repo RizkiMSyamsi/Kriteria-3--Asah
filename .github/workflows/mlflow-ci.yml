@@ -33,6 +33,13 @@ jobs:
           pip install mlflow==3.7.0
 
       # =========================
+      # 4A. Force Local MLflow Tracking
+      # =========================
+      - name: Set MLflow Tracking URI (local)
+        run: |
+          echo "MLFLOW_TRACKING_URI=file:./mlruns" >> $GITHUB_ENV
+
+      # =========================
       # 4. Run MLflow Project
       # =========================
       - name: Run MLflow Project
