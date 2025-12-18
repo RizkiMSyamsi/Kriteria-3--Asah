@@ -39,6 +39,10 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y jq
           RUN_ID=$(mlflow runs list --max-results 1 --output json | jq -r '.runs[0].info.run_id')
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "Error: No run found!"
+            exit 1
+          fi
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
           echo "Latest Run ID: $RUN_ID"
 
@@ -56,14 +60,14 @@ jobs:
 
       - name: Build Docker Model
         run: |
+          echo "Using Run ID: ${{ env.RUN_ID }}"
           mlflow models build-docker \
-            -m runs:/${{ env.RUN_ID }}/model \
+            -m "runs:/${{ env.RUN_ID }}/model" \
             -n ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-sales-model:${{ env.RUN_ID }}
 
       - name: Push Docker Image
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-sales-model:${{ env.RUN_ID }}
-          # Opsional: push tag latest
           docker tag ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-sales-model:${{ env.RUN_ID }} \
                      ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-sales-model:latest
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-sales-model:latest
