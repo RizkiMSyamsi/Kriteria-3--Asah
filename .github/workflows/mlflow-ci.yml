@@ -71,7 +71,7 @@ jobs:
       # Build Docker Model
       - name: Build Docker Model
         run: |
-          mlflow build-docker \
+          mlflow models build-docker \
             -m mlruns \
             -n ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-model:${{ env.RUN_ID }}
 
