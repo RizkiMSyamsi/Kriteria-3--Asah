@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 
-# Dataset harus ada di root repository
+# Dataset di folder yang sama
 DATA_PATH = "Sales-Transaction-v.4a_preprocessing.csv"
 
 mlflow.set_experiment("Sales Transaction - Linear Regression")
@@ -15,15 +15,14 @@ print("Dataset shape:", df.shape)
 print("Columns:", list(df.columns))
 
 y = df["Price"]
-X = df.drop(columns=["Price"]).astype("float64")
-y = y.astype("float64")
+X = df.drop(columns=["Price"]).select_dtypes(include=["float64", "int64"])
 
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
 with mlflow.start_run(run_name="Linear Regression - Sales Price") as run:
-    mlflow.sklearn.autolog(log_models=False)  # autolog tapi model log manual
+    mlflow.sklearn.autolog(log_models=False)
 
     model = LinearRegression()
     model.fit(X_train, y_train)
@@ -35,9 +34,9 @@ with mlflow.start_run(run_name="Linear Regression - Sales Price") as run:
     mlflow.log_metric("mse", mse)
     mlflow.log_metric("r2", r2)
 
-    # Penting: log model secara eksplisit agar bisa di-build docker
+    # Log model secara eksplisit agar bisa dibuild Docker
     mlflow.sklearn.log_model(model, artifact_path="model")
 
-    print(f"Run ID: {run.info.run_id}")
+    print(f"Training selesai! Run ID: {run.info.run_id}")
     print("MSE:", mse)
     print("R2:", r2)

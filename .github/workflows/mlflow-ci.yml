@@ -6,85 +6,62 @@ on:
   workflow_dispatch:
 
 jobs:
-  train-model:
+  train-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Set up job (implicit)
-
-      # 2. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 3. Set up Python 3.10
-      - name: Set up Python
+      - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
-      # 4. Check Env
-      - name: Check Env
+      - name: Check Environment
         run: |
           python --version
           pip --version
-          echo "Current directory: $(pwd)"
 
-      # 5. Install dependencies
       - name: Install MLflow
         run: |
           pip install --upgrade pip
-          pip install mlflow==2.17.0 scikit-learn pandas  # versi terbaru & stabil
+          pip install mlflow scikit-learn pandas
 
-      # 6. Run MLflow Project
       - name: Run MLflow Project
         run: |
-          mlflow run . --env-manager=local   # gunakan "." lebih aman daripada "MLProject"
+          cd MLProject
+          mlflow run . --env-manager=local
 
-      # 7. Get latest MLflow run_id (diperbaiki & akurat)
-      - name: Get latest MLflow run_id
+      - name: Get Latest Run ID
         run: |
           sudo apt-get update && sudo apt-get install -y jq
-          RUN_ID=$(mlflow runs list \
-            --experiment-name "Sales Transaction - Linear Regression" \
-            --max-results 1 \
-            --output json | jq -r '.runs[0].info.run_id')
+          RUN_ID=$(mlflow runs list --experiment-name "Sales Transaction - Linear Regression" --max-results 1 --output json | jq -r '.runs[0].info.run_id')
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
           echo "Latest Run ID: $RUN_ID"
 
-      # 8. Install additional dependencies (docker client jika diperlukan)
-      - name: Install additional dependencies
-        run: |
-          pip install docker  # sebenarnya Docker sudah ada di runner ubuntu-latest
-
-      # 9. Upload artifact (tetap ke GitHub Artifacts seperti yang Anda inginkan)
-      - name: Upload MLflow artifacts
+      - name: Upload MLflow Artifacts to GitHub
         uses: actions/upload-artifact@v4
         with:
           name: mlflow-artifacts
           path: mlruns/
 
-      # 10-11. Login Docker Hub
-      - name: Login Docker Hub
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 12. Build Docker Model (diperbaiki: gunakan runs:/<run_id>/model)
-      - name: Build Docker Model
+      - name: Build Docker Image
         run: |
           mlflow models build-docker \
             -m runs:/${{ env.RUN_ID }}/model \
-            -n ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-model:${{ env.RUN_ID }}
+            -n ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-sales-model:${{ env.RUN_ID }}
 
-      # 13. Push Docker Image
       - name: Push Docker Image
         run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-model:${{ env.RUN_ID }}
-
-      # Opsional: tag & push latest (biar lebih lengkap seperti alur dosen)
-      - name: Tag and Push latest
-        run: |
-          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-model:${{ env.RUN_ID }} \
-                     ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-model:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-model:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-sales-model:${{ env.RUN_ID }}
+          # Opsional: push tag latest
+          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-sales-model:${{ env.RUN_ID }} \
+                     ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-sales-model:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-sales-model:latest
