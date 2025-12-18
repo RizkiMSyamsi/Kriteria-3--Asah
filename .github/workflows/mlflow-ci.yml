@@ -37,12 +37,15 @@ jobs:
 
       - name: Get Latest MLflow run_id
         run: |
-          sudo apt-get update && sudo apt-get install -y jq
-          RUN_ID=$(mlflow runs list --max-results 1 --output json | jq -r '.runs[0].info.run_id')
-          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
-            echo "Error: No run found!"
+          echo "Finding latest run from mlruns directory..."
+          LATEST_RUN_DIR=$(ls -1 mlruns/0/ | sort | tail -n 1)
+          
+          if [ -z "$LATEST_RUN_DIR" ]; then
+            echo "Error: No run directory found in mlruns/0/"
             exit 1
           fi
+          
+          RUN_ID=$LATEST_RUN_DIR
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
           echo "Latest Run ID: $RUN_ID"
 
