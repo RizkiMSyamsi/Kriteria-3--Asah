@@ -38,7 +38,6 @@ if not os.path.isfile(csv_path):
 # ======================
 # Hapus run lama jika ada
 os.environ.pop("MLFLOW_RUN_ID", None)
-mlflow.end_run(suppress=True)  # suppress=True agar tidak error kalau tidak ada run aktif
 
 # Set tracking URI (gunakan SQLite)
 mlflow.set_tracking_uri("sqlite:///mlflow.db")
