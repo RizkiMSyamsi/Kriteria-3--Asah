@@ -46,16 +46,28 @@ jobs:
     - name: Get latest run_id
       id: get_run
       run: |
-        RUN_ID=$(mlflow runs list --experiment-name "Sales Transaction - Linear Regression" \
-          --max-results 1 | awk 'NR==2 {print $1}')
+        echo "Mencari experiment ID berdasarkan nama..."
 
-        if [ -z "$RUN_ID" ]; then
-          echo "ERROR: run_id tidak ditemukan!"
+        EXP_ID=$(mlflow experiments list | awk -F'  +' '/Sales Transaction - Linear Regression/ {print $1}')
+
+        if [ -z "$EXP_ID" ]; then
+          echo "ERROR: Experiment 'Sales Transaction - Linear Regression' tidak ditemukan!"
           exit 1
         fi
 
+        echo "Experiment ID ditemukan: $EXP_ID"
+
+        echo "Mencari RUN ID terbaru..."
+        RUN_ID=$(mlflow runs list --experiment-id $EXP_ID --max-results 1 | awk 'NR==2 {print $1}')
+
+        if [ -z "$RUN_ID" ]; then
+          echo "ERROR: Tidak ada run untuk experiment tersebut!"
+          exit 1
+        fi
+
+        echo "Run ID ditemukan: $RUN_ID"
+
         echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
-        echo "Detected run_id: $RUN_ID"
 
     # ------------------------------
     # Upload MLflow Artifacts
