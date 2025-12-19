@@ -38,10 +38,7 @@ jobs:
       # 3. Run MLflow Project
       - name: Run MLflow Project
         run: |
-          source $HOME/miniconda3/etc/profile.d/conda.sh
-          conda activate mlflow-env
           mlflow run MLProject -P input_path=MLProject/Sales-Transaction-v.4a_preprocessing.csv
-
 
       # 4. Get latest MLflow run_id
       - name: Get latest MLflow run_id
