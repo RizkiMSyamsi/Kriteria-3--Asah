@@ -11,25 +11,24 @@ from sklearn.metrics import mean_squared_error, r2_score
 os.environ.pop("MLFLOW_RUN_ID", None)
 mlflow.end_run()
 
-# SETUP TRACKING
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MLFLOW_DB = os.path.join(BASE_DIR, "mlflow.db")
-ARTIFACT_DIR = os.path.join(BASE_DIR, "mlruns")
-
-mlflow.set_tracking_uri(f"sqlite:///{MLFLOW_DB}")
+# ===============================
+# MLflow tracking (CI/CD-safe)
+# ===============================
+mlflow.set_tracking_uri("sqlite:///mlflow.db")  # RELATIF, aman utk CI
 mlflow.set_experiment("Sales Transaction - Linear Regression")
 
-# FIX: FORCE artifact location
-os.environ["MLFLOW_ARTIFACT_ROOT"] = ARTIFACT_DIR
+# Pastikan folder artifacts tersedia
+os.makedirs("mlruns", exist_ok=True)
 
-# LOAD DATA
-df = pd.read_csv(os.path.join(BASE_DIR, "Sales-Transaction-v.4a_preprocessing.csv"))
+# ===============================
+# Load dataset
+# ===============================
+df = pd.read_csv("Sales-Transaction-v.4a_preprocessing.csv")
 
 y = df["Price"].astype(float)
 X = df.drop(columns=["Price"]).astype(float)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
 
 with mlflow.start_run(run_name="Linear Regression - Sales Price"):
 
@@ -44,9 +43,7 @@ with mlflow.start_run(run_name="Linear Regression - Sales Price"):
     print("MSE:", mse)
     print("R2 :", r2)
 
-    # MANUAL LOGGING
     mlflow.log_metric("mse", mse)
     mlflow.log_metric("r2", r2)
 
-    
-    mlflow.sklearn.log_model(model, name="model")
+    mlflow.sklearn.log_model(model, artifact_path="model")
