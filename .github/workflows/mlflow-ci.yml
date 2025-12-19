@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      MLFLOW_ARTIFACT_ROOT: MLProject/mlruns
-      MLFLOW_TRACKING_URI: sqlite:///MLProject/mlflow.db
+      MLFLOW_TRACKING_URI: sqlite:///mlflow.db
+      MLFLOW_ARTIFACT_ROOT: ./mlruns
 
     steps:
     - name: Checkout repository
@@ -25,29 +25,24 @@ jobs:
     - name: Install Dependencies
       run: |
         pip install mlflow==3.7.0
-        pip install cloudpickle==3.1.2 numpy==2.2.6 pandas==2.3.3 psutil==7.1.3
-        pip install pyarrow==22.0.0 scikit-learn==1.7.2 scipy==1.15.3
+        pip install pandas numpy scikit-learn cloudpickle pyarrow psutil scipy
 
     - name: Run MLflow Project
       run: |
-        mlflow run MLProject/ --env-manager=local
+        mlflow run . --env-manager=local
 
     - name: Get latest run_id
       id: get_run
       run: |
         EXP_ID=$(mlflow experiments list | awk -F'  +' '/Sales Transaction - Linear Regression/ {print $1}')
-        [ -z "$EXP_ID" ] && echo "Experiment not found!" && exit 1
-
         RUN_ID=$(mlflow runs list --experiment-id $EXP_ID --max-results 1 | awk 'NR==2 {print $1}')
-        [ -z "$RUN_ID" ] && echo "Run not found!" && exit 1
-
         echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
 
     - name: Upload MLflow artifacts
       uses: actions/upload-artifact@v4
       with:
         name: mlflow-artifacts
-        path: MLProject/mlruns
+        path: mlruns
 
     - name: Build MLflow Docker Image
       run: |
@@ -68,4 +63,5 @@ jobs:
 
     - name: Push Docker Image
       run: |
-        docker push ${{ secrets.DOCKERHUB_USER }}/mlflow-sales-model:latest
+        docker push \
+          ${{ secrets.DOCKERHUB_USER }}/mlflow-sales-model:latest
