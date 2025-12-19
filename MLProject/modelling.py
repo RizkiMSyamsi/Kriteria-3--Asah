@@ -36,14 +36,16 @@ if not os.path.isfile(csv_path):
 # ======================
 # MLflow setup
 # ======================
-os.environ.pop("MLFLOW_RUN_ID", None)
-mlflow.end_run()
-mlflow.set_tracking_uri("sqlite:///mlflow.db")
-mlflow.set_experiment("Sales Transaction - Linear Regression")
-
-mlruns_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mlruns")
+# Tentukan folder mlruns
+base_dir = os.path.dirname(os.path.abspath(__file__))
+mlruns_dir = os.path.join(base_dir, "mlruns")
 os.makedirs(mlruns_dir, exist_ok=True)
+
+# Set tracking URI baru ke folder mlruns
 mlflow.set_tracking_uri(f"file://{mlruns_dir}")
+
+# Set experiment (akan otomatis dibuat jika belum ada)
+mlflow.set_experiment("Sales Transaction - Linear Regression")
 
 
 # ======================
