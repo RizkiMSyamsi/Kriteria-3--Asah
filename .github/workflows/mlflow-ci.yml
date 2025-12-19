@@ -96,6 +96,7 @@ jobs:
       # 6. Build Docker Model (optional)
       - name: Build Docker Model
         run: |
+          export MLFLOW_TRACKING_URI=sqlite:///MLProject/mlflow.db
           conda run -n ${{ env.CONDA_ENV_NAME }} mlflow models build-docker \
             --model-uri "runs:/$RUN_ID/model" \
             --name ${{ env.DOCKER_IMAGE_NAME }}
