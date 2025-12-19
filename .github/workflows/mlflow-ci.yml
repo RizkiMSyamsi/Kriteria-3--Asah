@@ -43,30 +43,7 @@ jobs:
           conda activate mlflow-env
           mlflow run MLProject -P input_path=Sales-Transaction-v.4a_preprocessing.csv
 
-      # # 4. Get latest MLflow run_id
-      # - name: Get latest MLflow run_id
-      #   id: get_run_id
-      #   run: |
-      #       source "$(conda info --base)/etc/profile.d/conda.sh"
-      #       conda activate mlflow-env
-      #       python - <<EOF
-      #       import mlflow
-      #       mlflow.set_tracking_uri("sqlite:///MLProject/mlflow.db")
-      #       experiment = mlflow.get_experiment_by_name("Sales Transaction - Linear Regression")
-      #       if experiment is None:
-      #           raise RuntimeError("Experiment tidak ditemukan!")
-            
-      #       runs = mlflow.search_runs(experiment_ids=[experiment.experiment_id], order_by=["start_time DESC"], max_results=1)
-      #       if runs.empty:
-      #           raise RuntimeError("Tidak ada run ditemukan!")
-            
-      #       run_id = runs.iloc[0]["run_id"]
-      #       print(f"RUN_ID={run_id}")
-            
-      #       with open("${GITHUB_ENV}", "a") as f:
-      #           f.write(f"RUN_ID={run_id}\n")
-      #       EOF
-
+      # 4. Get latest MLflow run_id
       - name: Get latest MLflow run_id
         id: get_run_id
         run: |
@@ -74,12 +51,11 @@ jobs:
             conda activate mlflow-env
             python - <<EOF
             import mlflow
-            mlflow.set_tracking_uri("MLProject/mlflow.db")
+            mlflow.set_tracking_uri("sqlite:///MLProject/mlflow.db")
             experiment = mlflow.get_experiment_by_name("Sales Transaction - Linear Regression")
             if experiment is None:
                 raise RuntimeError("Experiment tidak ditemukan!")
             
-            # Ambil run terbaru
             runs = mlflow.search_runs(experiment_ids=[experiment.experiment_id], order_by=["start_time DESC"], max_results=1)
             if runs.empty:
                 raise RuntimeError("Tidak ada run ditemukan!")
@@ -106,6 +82,8 @@ jobs:
       # 6. Build Docker Model (optional)
       - name: Build Docker Model
         run: |
+          source "$(conda info --base)/etc/profile.d/conda.sh"
+          conda activate ${{ env.CONDA_ENV_NAME }}
           export MLFLOW_TRACKING_URI=sqlite:///MLProject/mlflow.db
           conda run -n ${{ env.CONDA_ENV_NAME }} mlflow models build-docker \
             --model-uri "runs:/$RUN_ID/model" \
