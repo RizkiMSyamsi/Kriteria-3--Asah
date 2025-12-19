@@ -47,30 +47,37 @@ jobs:
       # - name: Get latest MLflow run_id
       #   id: get_run_id
       #   run: |
-      #     cd MLProject
-      #     RUN_ID=$(ls -td mlruns/0/*/ | head -n 1 | cut -d'/' -f3)
-
-      #     if [ -z "$RUN_ID" ]; then
-      #     echo "FATAL ERROR: RUN_ID tidak ditemukan."
-      #     exit 1
-      #     fi
-
-      #     echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
-      #     echo "Latest run_id: $RUN_ID"
-
+      #       source "$(conda info --base)/etc/profile.d/conda.sh"
+      #       conda activate mlflow-env
+      #       python - <<EOF
+      #       import mlflow
+      #       mlflow.set_tracking_uri("sqlite:///MLProject/mlflow.db")
+      #       experiment = mlflow.get_experiment_by_name("Sales Transaction - Linear Regression")
+      #       if experiment is None:
+      #           raise RuntimeError("Experiment tidak ditemukan!")
+            
+      #       runs = mlflow.search_runs(experiment_ids=[experiment.experiment_id], order_by=["start_time DESC"], max_results=1)
+      #       if runs.empty:
+      #           raise RuntimeError("Tidak ada run ditemukan!")
+            
+      #       run_id = runs.iloc[0]["run_id"]
+      #       print(f"RUN_ID={run_id}")
+            
+      #       with open("${GITHUB_ENV}", "a") as f:
+      #           f.write(f"RUN_ID={run_id}\n")
+      #       EOF
 
       - name: Get latest MLflow run_id
         id: get_run_id
         run: |
-            source "$(conda info --base)/etc/profile.d/conda.sh"
-            conda activate mlflow-env
             python - <<EOF
             import mlflow
-            mlflow.set_tracking_uri("sqlite:///MLProject/mlflow.db")
+            mlflow.set_tracking_uri("MLProject/mlflow.db")
             experiment = mlflow.get_experiment_by_name("Sales Transaction - Linear Regression")
             if experiment is None:
                 raise RuntimeError("Experiment tidak ditemukan!")
             
+            # Ambil run terbaru
             runs = mlflow.search_runs(experiment_ids=[experiment.experiment_id], order_by=["start_time DESC"], max_results=1)
             if runs.empty:
                 raise RuntimeError("Tidak ada run ditemukan!")
@@ -81,6 +88,7 @@ jobs:
             with open("${GITHUB_ENV}", "a") as f:
                 f.write(f"RUN_ID={run_id}\n")
             EOF
+
 
 
       # 5. Push MLflow Artifacts to Repo
