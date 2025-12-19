@@ -36,17 +36,12 @@ if not os.path.isfile(csv_path):
 # ======================
 # MLflow setup
 # ======================
-# Tentukan folder mlruns
-base_dir = os.path.dirname(os.path.abspath(__file__))
-mlruns_dir = os.path.join(base_dir, "mlruns")
-os.makedirs(mlruns_dir, exist_ok=True)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MLRUNS_DIR = os.path.join(BASE_DIR, "mlruns")
+os.makedirs(MLRUNS_DIR, exist_ok=True)
 
-# Set tracking URI baru ke folder mlruns
-mlflow.set_tracking_uri(f"file://{mlruns_dir}")
-
-# Set experiment (akan otomatis dibuat jika belum ada)
+mlflow.set_tracking_uri(f"file://{MLRUNS_DIR}")
 mlflow.set_experiment("Sales Transaction - Linear Regression")
-
 
 # ======================
 # Load dataset
