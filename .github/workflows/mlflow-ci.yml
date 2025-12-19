@@ -10,107 +10,62 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      MLFLOW_ARTIFACT_ROOT: ./mlruns
-      MLFLOW_TRACKING_URI: sqlite:///mlflow.db
+      MLFLOW_ARTIFACT_ROOT: MLProject/mlruns
+      MLFLOW_TRACKING_URI: sqlite:///MLProject/mlflow.db
 
     steps:
-    # ------------------------------
-    # Checkout repository
-    # ------------------------------
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # ------------------------------
-    # Setup Python 3.10
-    # ------------------------------
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
         python-version: "3.10"
 
-    # ------------------------------
-    # Install Dependencies
-    # ------------------------------
-    - name: Install Python dependencies
+    - name: Install Dependencies
       run: |
         pip install mlflow==3.7.0
         pip install cloudpickle==3.1.2 numpy==2.2.6 pandas==2.3.3 psutil==7.1.3
         pip install pyarrow==22.0.0 scikit-learn==1.7.2 scipy==1.15.3
 
-    # ------------------------------
-    # Run MLflow Project
-    # ------------------------------
     - name: Run MLflow Project
       run: |
-        mlflow run MLProject --env-manager=local
+        mlflow run MLProject/ --env-manager=local
 
-    # ------------------------------
-    # Get latest run_id
-    # ------------------------------
     - name: Get latest run_id
       id: get_run
       run: |
-        echo "Mencari experiment ID berdasarkan nama..."
-
         EXP_ID=$(mlflow experiments list | awk -F'  +' '/Sales Transaction - Linear Regression/ {print $1}')
+        [ -z "$EXP_ID" ] && echo "Experiment not found!" && exit 1
 
-        if [ -z "$EXP_ID" ]; then
-          echo "ERROR: Experiment tidak ditemukan!"
-          exit 1
-        fi
-
-        echo "Experiment ID ditemukan: $EXP_ID"
-
-        echo "Mencari run terbaru..."
         RUN_ID=$(mlflow runs list --experiment-id $EXP_ID --max-results 1 | awk 'NR==2 {print $1}')
+        [ -z "$RUN_ID" ] && echo "Run not found!" && exit 1
 
-        if [ -z "$RUN_ID" ]; then
-          echo "ERROR: Tidak ada run!"
-          exit 1
-        fi
-
-        echo "Run ID ditemukan: $RUN_ID"
         echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
 
-    # ------------------------------
-    # Upload Artifacts
-    # ------------------------------
     - name: Upload MLflow artifacts
       uses: actions/upload-artifact@v4
       with:
         name: mlflow-artifacts
         path: MLProject/mlruns
 
-    # ------------------------------
-    # Build Docker Image
-    # ------------------------------
     - name: Build MLflow Docker Image
       run: |
         mlflow models build-docker \
           --model-uri "runs:/${{ steps.get_run.outputs.run_id }}/model" \
           --name mlflow-sales-model
 
-    # ------------------------------
-    # Login Docker Hub
-    # ------------------------------
     - name: Log in to Docker Hub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USER }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    # ------------------------------
-    # Tag Docker Image
-    # ------------------------------
     - name: Tag Docker Image
       run: |
         docker tag mlflow-sales-model \
           ${{ secrets.DOCKERHUB_USER }}/mlflow-sales-model:latest
 
-    # ------------------------------
-    # Push Docker Image
-    # ------------------------------
     - name: Push Docker Image
       run: |
-        docker push \
-          ${{ secrets.DOCKERHUB_USER }}/mlflow-sales-model:latest
+        docker push ${{ secrets.DOCKERHUB_USER }}/mlflow-sales-model:latest
