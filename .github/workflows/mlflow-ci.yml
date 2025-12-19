@@ -38,12 +38,15 @@ jobs:
         RUN_ID=$(python - << 'EOF'
         import mlflow
         client = mlflow.tracking.MlflowClient()
-        exp = client.get_experiment_by_name("Sales Transaction - Linear Regression")
-        runs = client.search_runs(exp.experiment_id, order_by=["attributes.start_time DESC"], max_results=1)
+        runs = client.search_runs(
+            experiment_ids=["0"],
+            order_by=["attributes.start_time DESC"],
+        max_results=1)
         print(runs[0].info.run_id)
         EOF
-            )
+        )
         echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+
 
     - name: Build Docker Model
       working-directory: MLProject
