@@ -1,4 +1,7 @@
-name: MLflow CI Retraining Pipeline
+name: MLflow CI/CD Retraining Pipeline
+
+permissions:
+  contents: write
 
 on:
   push:
@@ -6,77 +9,78 @@ on:
   workflow_dispatch:
 
 jobs:
-  retrain-model:
+  retrain:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Run actions/checkout@v3
-      uses: actions/checkout@v3
+    # 1. Ambil kode
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-    - name: Set up Python 3.10
+    # 2. Setup Python
+    - name: Setup Python 3.10
       uses: actions/setup-python@v4
       with:
         python-version: "3.10"
 
-    - name: Check Env
-      run: |
-        python --version
-        pip --version
-
+    # 3. Install dependencies
     - name: Install dependencies
       run: |
         pip install mlflow==3.7.0
+        pip install pandas scikit-learn
 
-    - name: Run MLflow Project
-      working-directory: MLProject
+    # 4. Explicit run modelling.py (bukan MLProject)
+    - name: Run modelling.py
       run: |
-        mlflow run . \
-        --env-manager=local \
-        --experiment-name "Sales Transaction - Linear Regression"
+        python MLProject/modelling.py
 
-
+    # 5. Ambil run_id terbaru dari mlflow.db + mlruns/
     - name: Get latest MLflow run_id
       id: get_run
       run: |
-        RUN_ID=$(python - << 'EOF'
-        import mlflow
-        client = mlflow.tracking.MlflowClient()
-      
-        exp = client.get_experiment_by_name("Sales Transaction - Linear Regression")
-        if exp is None:
-          raise Exception("Experiment not found!")
-      
-        runs = client.search_runs(
-          experiment_ids=[exp.experiment_id],
-          order_by=["attributes.start_time DESC"],
-          max_results=1)
-      
-        if len(runs) == 0:
-          raise Exception("No MLflow runs found in the experiment!")
-      
-        print(runs[0].info.run_id)
-        EOF)
-          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+        RUN_ID=$(ls -td mlruns/0/*/ | head -n 1 | cut -d'/' -f3)
 
+        if [ -z "$RUN_ID" ]; then
+          echo "FATAL ERROR: RUN_ID tidak ditemukan."
+          exit 1
+        fi
 
+        echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+        echo "Latest run_id: $RUN_ID"
 
+    # 6. Force-push artifacts mlruns + mlflow.db ke repo
+    - name: Push MLflow Artifacts
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+        git add -f mlruns/ mlflow.db
+
+        git commit -m "Add MLflow artifacts for run $RUN_ID" || echo "No changes to commit"
+
+        git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
+
+    # 7. Build Docker image
     - name: Build Docker Model
-      working-directory: MLProject
       run: |
         mlflow models build-docker \
           --model-uri "runs:/${{ env.RUN_ID }}/model" \
           --name sales-mlflow-model
 
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v2
+    # 8. Login Docker Hub
+    - name: Docker Login
+      uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+    # 9. Tag Image
     - name: Tag Docker Image
       run: |
-        docker tag sales-mlflow-model ${{ secrets.DOCKERHUB_USERNAME }}/sales-mlflow-model:latest
+        docker tag sales-mlflow-model \
+        ${{ secrets.DOCKERHUB_USERNAME }}/sales-mlflow-model:latest
 
+    # 10. Push Docker Image
     - name: Push Docker Image
       run: |
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/sales-mlflow-model:latest
