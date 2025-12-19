@@ -9,12 +9,16 @@ from sklearn.metrics import mean_squared_error, r2_score
 
 # FIX: clean old state
 os.environ.pop("MLFLOW_RUN_ID", None)
+os.environ.pop("MLFLOW_TRACKING_URI", None)
+os.environ.pop("MLFLOW_ARTIFACT_URI", None)
+os.environ.pop("MLFLOW_S3_ENDPOINT_URL", None)  
+
 mlflow.end_run()
 
 # ===============================
 # MLflow tracking (CI/CD-safe)
 # ===============================
-mlflow.set_tracking_uri("sqlite:///mlflow.db")  # RELATIF, aman utk CI
+mlflow.set_tracking_uri("sqlite:///mlflow.db") 
 mlflow.set_experiment("Sales Transaction - Linear Regression")
 
 # Pastikan folder artifacts tersedia
