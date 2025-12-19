@@ -1,7 +1,8 @@
-name: sales-transaction-linear-regression
+name: sales-linear-regression
 
 conda_env: conda.yaml
 
 entry_points:
   main:
-    command: "python modelling.py Sales-Transaction-v.4a_preprocessing.csv"
+    parameters: {}
+    command: "python modelling.py"
