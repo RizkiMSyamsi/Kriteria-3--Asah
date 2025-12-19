@@ -43,20 +43,43 @@ jobs:
           conda activate mlflow-env
           mlflow run MLProject -P input_path=Sales-Transaction-v.4a_preprocessing.csv
 
-      # 4. Get latest MLflow run_id
+      # # 4. Get latest MLflow run_id
+      # - name: Get latest MLflow run_id
+      #   id: get_run_id
+      #   run: |
+      #     cd MLProject
+      #     RUN_ID=$(ls -td mlruns/0/*/ | head -n 1 | cut -d'/' -f3)
+
+      #     if [ -z "$RUN_ID" ]; then
+      #     echo "FATAL ERROR: RUN_ID tidak ditemukan."
+      #     exit 1
+      #     fi
+
+      #     echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+      #     echo "Latest run_id: $RUN_ID"
+
+
       - name: Get latest MLflow run_id
         id: get_run_id
         run: |
-          cd MLProject
-          RUN_ID=$(ls -td mlruns/0/*/ | head -n 1 | cut -d'/' -f3)
+            python - <<EOF
+            import mlflow
+            mlflow.set_tracking_uri("sqlite:///MLProject/mlflow.db")
+            experiment = mlflow.get_experiment_by_name("Sales Transaction - Linear Regression")
+            if experiment is None:
+                raise RuntimeError("Experiment tidak ditemukan!")
+            
+            runs = mlflow.search_runs(experiment_ids=[experiment.experiment_id], order_by=["start_time DESC"], max_results=1)
+            if runs.empty:
+                raise RuntimeError("Tidak ada run ditemukan!")
+            
+            run_id = runs.iloc[0]["run_id"]
+            print(f"RUN_ID={run_id}")
+            
+            with open("${GITHUB_ENV}", "a") as f:
+                f.write(f"RUN_ID={run_id}\n")
+            EOF
 
-          if [ -z "$RUN_ID" ]; then
-          echo "FATAL ERROR: RUN_ID tidak ditemukan."
-          exit 1
-          fi
-
-          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
-          echo "Latest run_id: $RUN_ID"
 
       # 5. Push MLflow Artifacts to Repo
       - name: Push MLflow Artifacts to Repo
