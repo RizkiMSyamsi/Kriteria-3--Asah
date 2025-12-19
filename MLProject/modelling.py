@@ -13,8 +13,14 @@ mlflow.end_run()
 
 # SETUP TRACKING
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-mlflow.set_tracking_uri(f"sqlite:///{os.path.join(BASE_DIR,'mlflow.db')}")
+MLFLOW_DB = os.path.join(BASE_DIR, "mlflow.db")
+ARTIFACT_DIR = os.path.join(BASE_DIR, "mlruns")
+
+mlflow.set_tracking_uri(f"sqlite:///{MLFLOW_DB}")
 mlflow.set_experiment("Sales Transaction - Linear Regression")
+
+# FIX: FORCE artifact location
+os.environ["MLFLOW_ARTIFACT_ROOT"] = ARTIFACT_DIR
 
 # LOAD DATA
 df = pd.read_csv(os.path.join(BASE_DIR, "Sales-Transaction-v.4a_preprocessing.csv"))
@@ -24,8 +30,6 @@ X = df.drop(columns=["Price"]).astype(float)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# DISABLE AUTOLOG (prevent Windows path injection)
-# mlflow.sklearn.autolog()
 
 with mlflow.start_run(run_name="Linear Regression - Sales Price"):
 
@@ -40,8 +44,9 @@ with mlflow.start_run(run_name="Linear Regression - Sales Price"):
     print("MSE:", mse)
     print("R2 :", r2)
 
-    # MANUAL LOGGING (aman untuk CI/CD)
+    # MANUAL LOGGING
     mlflow.log_metric("mse", mse)
     mlflow.log_metric("r2", r2)
 
-    mlflow.sklearn.log_model(model, "model")
+    
+    mlflow.sklearn.log_model(model, name="model")
